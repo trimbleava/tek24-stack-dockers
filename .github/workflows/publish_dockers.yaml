@@ -41,10 +41,9 @@ jobs:
       #
 
       #
-      - name: Create env file
+      - name: Create env file TODO
         run: |
-          touch .env
-          echo ./.env >> .env
+          cp ./.env ${{gihub.workspace}}
           cat .env
       - name: Build dockers
         run: |
