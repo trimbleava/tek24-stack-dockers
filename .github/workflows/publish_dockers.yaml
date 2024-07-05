@@ -35,7 +35,7 @@ jobs:
       #
       - name: Build dockers
         run: |
-          docker compose -f ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/compose.yml build
+          docker compose -f ./compose.yml build
      
 
 # CMD tail -f /dev/null
