@@ -56,6 +56,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       #
+      - name: Create env file
+        uses: SpicyPizza/create-envfile@v1
+        with:
+          file_name: .env
       - name: Build dockers
         run: |
           docker compose -f ./compose.yml up -d
