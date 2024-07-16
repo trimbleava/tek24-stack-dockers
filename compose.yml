@@ -4,6 +4,8 @@ services:
     image: redis
     volumes:
       - ${TENANT_DATA}/redis_data:/app
+    networks:
+      - tekstack-shared-network
     env_file: .env
     ports:
       - '6379:6379'
@@ -12,29 +14,22 @@ services:
     image: nginx
     restart: always
     volumes:
-      - ./nginx/default.conf:/tmp/default.conf
+      # - ./nginx/default.conf:/tmp/default.conf
+      - ${TENANT_DATA}/nginx_data:/tmp/default.conf
+    networks:
+      - tekstack-shared-network
     ports:
       - "8080:80"
-  # https://hub.docker.com/_/postgres
-  #  postgres:
-  #    image: postgres:latest
-  #    volumes:
-  #      - ${TENANT_DATA}/db_data:/var/lib/postgresql/data
-  #    env_file: .env
-  #    environment:
-  #      - POSTGRES_USER=${POSTGRES_USER}
-  #      - POSTGRES_PASSWORD=${POSTGRES_PW}
-  #      - POSTGRES_DB=${POSTGRES_DB} #optional (specify default database instead of $POSTGRES_DB)
-  #    ports:
-  #      - "5432:5432"
-  #    restart: always
+  #
   # https://hub.docker.com/r/postgis/postgis - installs the postgres with it
   postgis:
     image: postgis/postgis:${POSTGRES_MAJOR_VERSION}-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_RELEASE}
     volumes:
-      - ${TENANT_DATA}/db_data:/var/lib/postgresql/data
+      - ${TENANT_DATA}/tenant_data:/var/lib/postgresql/data
       - ${TENANT_BKUP}/dbbakups:/backups
     env_file: .env
+    networks:
+      - tekstack-shared-network
     environment:
       # If you need to create multiple database you can add coma separated databases eg gis,data
       - POSTGRES_DB=${POSTGRES_DB}
@@ -50,22 +45,22 @@ services:
     healthcheck:
         test: "PGPASSWORD=postgres pg_isready -h 127.0.0.1 -U postgres -d postgres"
   #
-  #  dbbackups:
-  #    image: kartoza/pg-backup:${POSTGRES_MAJOR_VERSION}-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_RELEASE}
-  #    hostname: pg-backups
-  #    volumes:
-  #      - ${TENANT_BKUP}/dbbackups:/backups
-  #    env_file: .env
-  #    environment:
-  #      - DUMPPREFIX=PG_db
-  #      - POSTGRES_USER=${POSTGRES_USER}
-  #      - POSTGRES_PASS=${POSTGRES_PW}
-  #      - POSTGRES_PORT=5432
-  #      - POSTGRES_HOST=${POSTGRES_BKUP_HOST}
-  #    restart: on-failure
-  #    depends_on:
-  #      postgis:
-  #        condition: service_healthy
+  dbbackups:
+    image: kartoza/pg-backup:${POSTGRES_MAJOR_VERSION}-${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_RELEASE}
+    hostname: ${POSTGRES_BKUP_HOST}
+    volumes:
+      - ${TENANT_BKUP}/dbbackups:/backups
+    env_file: .env
+    environment:
+      - DUMPPREFIX=PG_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASS=${POSTGRES_PW}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_HOST=${POSTGRES_BKUP_HOST}
+    restart: on-failure
+    depends_on:
+      postgis:
+        condition: service_healthy
   # https://hub.docker.com/r/dpage/pgadmin4
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -73,15 +68,26 @@ services:
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_MAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PW}
+    volumes:
+      - ${TENANT_DATA}/pgadmin_data:/var/lib/pgadmin
+    networks:
+      - tekstack-shared-network
     ports:
       - "5050:80"
     restart: always
 #
 volumes:
-  db_data:
+  tenant_data:
     external: true
   redis_data:
     external: true
   dbbackups:
     external: true
+  pgadmin_data:
+    external: true
+  nginx_data:
+    external: true
 #
+networks:
+  tekstack-shared-network:
+    external: true
